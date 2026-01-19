@@ -6,6 +6,7 @@ public struct Cell()
     public int Y { get; set; }
     public bool IsMine { get; set; }
     public State State { get; set; }
+    public ConsoleColor Color { get; set; }
     public char Symbol { get; set; }
     public int MinesAround { get; set; }
 }
