@@ -30,6 +30,8 @@ public class Game
     private int _mapWidth;
     private int _mapHeight;
 
+    private int _preset;
+    private DateTime _startDate;
     private int _minesCount;
     private int _flagsCount;
 
@@ -92,147 +94,152 @@ public class Game
             _buffer[i + (SCREEN_WIDTH * (row - 1))] = arr[i];
     }
 
-    public void StartGame()
+    public void Run()
     {
         InitMediumGame();
 
+        Clear();
         SetWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
         SetBufferSize(SCREEN_WIDTH, SCREEN_HEIGHT);
         CursorVisible = false;
 
-        var startDate = DateTime.UtcNow;
-
-        var preset = 2;
-
-        var mapRow = 6;
-
         while (true)
         {
             SetCursorPosition(0, 0);
+            WriteInfo();
+            HandleInput();
+        }
+    }
 
-            SetInfoLine(4);
-            SetMap(mapRow);
-            Write(_buffer);
+    private void WriteInfo()
+    {
+        SetInfoLine(4);
+        SetMap(6);
+        Write(_buffer);
+    }
 
-            var input = ReadKey(true).Key;
+    private void HandleInput()
+    {
+        if (!KeyAvailable)
+            return;
 
-            switch (input)
-            {
-                case ConsoleKey.E:
-                    var diff = DateTime.UtcNow.Subtract(startDate);
+        var input = ReadKey(true).Key;
 
-                    string message;
+        switch (input)
+        {
+            case ConsoleKey.E:
+                var diff = DateTime.UtcNow.Subtract(_startDate);
 
-                    if (Dig())
-                        if (!AllWihoutMinesHasDigged())
-                            break;
-                        else
-                            message = $"Победа! Время: {diff}";
-                    else
-                        message = $"Взрыв! Время: {diff}";
+                string message;
 
-                    Array.Fill(_buffer, ' ');
-                    SetHeaderLine(2);
-                    AddArrayToLine(message.ToArray(), 4);
-                    SetDiggedMapWithMines(mapRow);
-
-                    var endMessage = "Нажмите Enter чтобы выйти, или введите R чтобы начать заново: ".ToArray();
-                    AddArrayToLine(endMessage, _mapHeight + 8);
-                    Write(_buffer);
-
-                    SetCursorPosition(endMessage.Length, _mapHeight + 7);
-                    var strInput = ReadLine()?
-                        .ToUpper();
-
-                    startDate = DateTime.UtcNow;
-
-                    if (strInput == "R")
-                    {
-                        switch (preset)
-                        {
-                            case 1:
-                                InitEasyGame();
-                                break;
-
-                            case 2:
-                                InitMediumGame();
-                                break;
-
-                            case 3:
-                                InitHardGame();
-                                break;
-                        }
+                if (DigAtPlayerPosition())
+                    if (!AllWihoutMinesHasDigged())
                         break;
+                    else
+                        message = $"Победа! Время: {diff}";
+                else
+                    message = $"Взрыв! Время: {diff}";
+
+                Array.Fill(_buffer, ' ');
+                SetHeaderLine(2);
+                AddArrayToLine(message.ToArray(), 4);
+                SetDiggedMapWithMines(6);
+
+                var endMessage = "Нажмите Enter чтобы выйти, или введите R чтобы начать заново: ".ToArray();
+                AddArrayToLine(endMessage, _mapHeight + 8);
+                Write(_buffer);
+
+                SetCursorPosition(endMessage.Length, _mapHeight + 7);
+                var strInput = ReadLine()?
+                    .ToUpper();
+
+                _startDate = DateTime.UtcNow;
+
+                if (strInput == "R")
+                {
+                    switch (_preset)
+                    {
+                        case 1:
+                            InitEasyGame();
+                            break;
+
+                        case 2:
+                            InitMediumGame();
+                            break;
+
+                        case 3:
+                            InitHardGame();
+                            break;
                     }
-                    return;
-
-                case ConsoleKey.Q:
-                    SetFlagAtPlayerPosition();
                     break;
+                }
+                return;
 
-                case ConsoleKey.W:
-                case ConsoleKey.UpArrow:
-                    MoveUp();
-                    break;
+            case ConsoleKey.Q:
+                SetFlagAtPlayerPosition();
+                break;
 
-                case ConsoleKey.A:
-                case ConsoleKey.LeftArrow:
-                    MoveLeft();
-                    break;
+            case ConsoleKey.W:
+            case ConsoleKey.UpArrow:
+                MoveUp();
+                break;
 
-                case ConsoleKey.S:
-                case ConsoleKey.DownArrow:
-                    MoveDown();
-                    break;
+            case ConsoleKey.A:
+            case ConsoleKey.LeftArrow:
+                MoveLeft();
+                break;
 
-                case ConsoleKey.D:
-                case ConsoleKey.RightArrow:
-                    MoveRight();
-                    break;
+            case ConsoleKey.S:
+            case ConsoleKey.DownArrow:
+                MoveDown();
+                break;
+
+            case ConsoleKey.D:
+            case ConsoleKey.RightArrow:
+                MoveRight();
+                break;
 
 
-                case ConsoleKey.D1:
-                    InitEasyGame();
-                    startDate = DateTime.UtcNow;
-                    preset = 1;
-                    break;
+            case ConsoleKey.D1:
+                InitEasyGame();
+                break;
 
-                case ConsoleKey.D2:
-                    InitMediumGame();
-                    startDate = DateTime.UtcNow;
-                    preset = 2;
-                    break;
+            case ConsoleKey.D2:
+                InitMediumGame();
+                break;
 
-                case ConsoleKey.D3:
-                    InitHardGame();
-                    startDate = DateTime.UtcNow;
-                    preset = 3;
-                    break;
+            case ConsoleKey.D3:
+                InitHardGame();
+                break;
 
-                case ConsoleKey.Escape:
-                case ConsoleKey.X:
-                    return;
-            }
+            case ConsoleKey.Escape:
+            case ConsoleKey.X:
+                return;
         }
     }
 
     private void InitEasyGame()
     {
+        _preset = 1;
         Init(EASY_X_PRESET, EASY_Y_PRESET, EASY_MINES_COUNT_PRESET);
     }
 
     private void InitMediumGame()
     {
+        _preset = 2;
         Init(MEDIUM_X_PRESET, MEDIUM_Y_PRESET, MEDIUM_MINES_COUNT_PRESET);
     }
 
     private void InitHardGame()
     {
+        _preset = 3;
         Init(HARD_X_PRESET, HARD_Y_PRESET, HARD_MINES_COUNT_PRESET);
     }
 
     private void Init(int x, int y, int minesCount)
     {
+        _startDate = DateTime.UtcNow;
+
         _mapWidth = x + 2; // Увеличиваем для границ
         _mapHeight = y + 2;
 
@@ -252,8 +259,8 @@ public class Game
                 else
                     cell.Symbol = DEFAULT_SYMBOL;
 
-                _playerX = xI + 1;
-                _playerY = yI + 1;
+                cell.X = xI;
+                cell.Y = yI;
 
                 grid[xI, yI] = cell;
             }
@@ -289,7 +296,6 @@ public class Game
         _map = grid;
         SetMinesCountAround();
 
-        Array.Clear(_buffer);
         Array.Fill(_buffer, ' ');
         SetHeaderLine(2);
         SetControlHelpLine(_mapHeight + 7);
@@ -322,13 +328,13 @@ public class Game
     }
 
 
-    private bool Dig()
+    private bool DigAtPlayerPosition()
     {
         if (_map[_playerX, _playerY].State is State.Flag)
             return true;
 
-        _map[_playerX, _playerY].Symbol = DIGGED_SYMBOL;
-        _map[_playerX, _playerY].State = State.Digged;
+        BfsDig();
+        Dig(_playerX, _playerY);
 
         SetSymbolAtPlayerPosition();
 
@@ -337,6 +343,37 @@ public class Game
 
         return true;
     }
+
+    private void Dig(int x, int y)
+    {
+        _map[x, y].State = State.Digged;
+        SetSymbol(x, y);
+    }
+
+    private void BfsDig()
+    {
+        var queue = new Queue<Cell>();
+        queue.Enqueue(_map[_playerX, _playerY]);
+
+        while (queue.Count > 0)
+        {
+            var cell = queue.Peek();
+            queue.Dequeue();
+
+            if (cell.MinesAround is not 0)
+                continue;
+
+            foreach (var item in GetCellsAround(cell.X, cell.Y))
+            {
+                if (IsBorder(item.X, item.Y) || item.State is State.Digged)
+                    continue;
+
+                queue.Enqueue(item);
+                Dig(item.X, item.Y);
+            }
+        }
+    }
+
 
     private bool AllWihoutMinesHasDigged()
     {
@@ -358,49 +395,68 @@ public class Game
 
     private void SetMinesCountAround()
     {
-        for (int yI = 0; yI < _mapHeight; yI++)
-        {
-            for (int xI = 0; xI < _mapWidth; xI++)
-            {
-                if (IsBorder(xI, yI))
+        for (int y = 0; y < _mapHeight; y++)
+            for (int x = 0; x < _mapWidth; x++)
+                if (IsBorder(x, y))
                     continue;
-
-                var cell1 = _map[xI - 1, yI - 1];
-                var cell2 = _map[xI, yI - 1];
-                var cell3 = _map[xI + 1, yI - 1];
-
-                var cell4 = _map[xI - 1, yI];
-                var cell6 = _map[xI + 1, yI];
-
-                var cell7 = _map[xI - 1, yI + 1];
-                var cell8 = _map[xI, yI + 1];
-                var cell9 = _map[xI + 1, yI + 1];
-
-                int minesAround = 0;
-
-                if (cell1.IsMine)
-                    minesAround++;
-                if (cell2.IsMine)
-                    minesAround++;
-                if (cell3.IsMine)
-                    minesAround++;
-
-                if (cell4.IsMine)
-                    minesAround++;
-                if (cell6.IsMine)
-                    minesAround++;
-
-                if (cell7.IsMine)
-                    minesAround++;
-                if (cell8.IsMine)
-                    minesAround++;
-                if (cell9.IsMine)
-                    minesAround++;
-
-                _map[xI, yI].MinesAround = minesAround;
-            }
-        }
+                else
+                    _map[x, y].MinesAround = GetMinesAroundCount(x, y);
     }
+
+    private int GetMinesAroundCount(int x, int y)
+    {
+        var cell1 = _map[x - 1, y - 1];
+        var cell2 = _map[x, y - 1];
+        var cell3 = _map[x + 1, y - 1];
+
+        var cell4 = _map[x - 1, y];
+        var cell6 = _map[x + 1, y];
+
+        var cell7 = _map[x - 1, y + 1];
+        var cell8 = _map[x, y + 1];
+        var cell9 = _map[x + 1, y + 1];
+
+        int minesAround = 0;
+
+        if (cell1.IsMine)
+            minesAround++;
+        if (cell2.IsMine)
+            minesAround++;
+        if (cell3.IsMine)
+            minesAround++;
+
+        if (cell4.IsMine)
+            minesAround++;
+        if (cell6.IsMine)
+            minesAround++;
+
+        if (cell7.IsMine)
+            minesAround++;
+        if (cell8.IsMine)
+            minesAround++;
+        if (cell9.IsMine)
+            minesAround++;
+
+        return minesAround;
+    }
+
+
+    private Cell[] GetCellsAround(int x, int y)
+    {
+        var cell1 = _map[x - 1, y - 1];
+        var cell2 = _map[x, y - 1];
+        var cell3 = _map[x + 1, y - 1];
+
+        var cell4 = _map[x - 1, y];
+        var cell6 = _map[x + 1, y];
+
+        var cell7 = _map[x - 1, y + 1];
+        var cell8 = _map[x, y + 1];
+        var cell9 = _map[x + 1, y + 1];
+
+        return [cell1, cell2, cell3, cell4, cell6, cell7, cell8, cell9];
+    }
+
 
 
     private void SetFlagAtPlayerPosition()
@@ -421,22 +477,27 @@ public class Game
 
     private void SetSymbolAtPlayerPosition()
     {
-        if (_map[_playerX, _playerY].State is State.Default)
+        SetSymbol(_playerX, _playerY);
+    }
+
+    private void SetSymbol(int x, int y)
+    {
+        if (_map[x, y].State is State.Default)
         {
-            _map[_playerX, _playerY].Symbol = DEFAULT_SYMBOL;
+            _map[x, y].Symbol = DEFAULT_SYMBOL;
         }
-        else if (_map[_playerX, _playerY].State is State.Flag)
+        else if (_map[x, y].State is State.Flag)
         {
-            _map[_playerX, _playerY].Symbol = FLAG_SYMBOL;
+            _map[x, y].Symbol = FLAG_SYMBOL;
         }
-        else if (_map[_playerX, _playerY].State is State.Digged)
+        else if (_map[x, y].State is State.Digged)
         {
-            if (_map[_playerX, _playerY].MinesAround is not 0)
-                _map[_playerX, _playerY].Symbol = _map[_playerX, _playerY].MinesAround
+            if (_map[x, y].MinesAround is not 0)
+                _map[x, y].Symbol = _map[x, y].MinesAround
                     .ToString()
                     .First();
             else
-                _map[_playerX, _playerY].Symbol = DIGGED_SYMBOL;
+                _map[x, y].Symbol = DIGGED_SYMBOL;
         }
     }
 
