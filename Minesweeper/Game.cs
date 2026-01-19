@@ -18,9 +18,9 @@ public class Game
 
     private const ConsoleColor TEXT_COLOR = ConsoleColor.White;
 
-    private const char DEFAULT_SYMBOL = '█';
     private const ConsoleColor DEFAULT_COLOR_EVEN = ConsoleColor.Green;
     private const ConsoleColor DEFAULT_COLOR_NOT_EVEN = ConsoleColor.DarkGreen;
+    private const char DEFAULT_SYMBOL = '█';
 
     private const ConsoleColor BORDER_COLOR = ConsoleColor.DarkGray;
     private const char BORDER_SYMBOL = '█';
@@ -41,22 +41,41 @@ public class Game
     private const int SCREEN_WIDTH = 100;
     private const int SCREEN_HEIGHT = 50;
 
+    private const int MAP_POSITION = 4;
+    private const int INFO_POSITION = 2;
+    private const int FOOTER_POSITION = 5;
+
     private int _mapWidth;
     private int _mapHeight;
 
-    private int _mapPosition = 4;
-    private int _infoPosition = 2;
-    private int _footerPosition = 5;
-
     private DateTime _startDate;
     private int _preset;
-    private int _minesCount;
-    private int _flagsCount;
+
+    private int _digged;
+    private int _mines;
+    private int _flags;
 
     private int _playerX, _playerY;
 
     private readonly CancellationTokenSource _cts = new();
     private Cell[,] _map;
+
+
+    public void Run()
+    {
+        SetWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        SetBufferSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        CursorVisible = false;
+
+        InitMediumGame();
+
+        while (!_cts.IsCancellationRequested)
+        {
+            WriteInfo();
+            HandleInput();
+        }
+    }
+
 
     private void AddHeaderLine()
     {
@@ -65,14 +84,14 @@ public class Game
 
     private void AddInfoLine(int row)
     {
-        AddMessageToLine($"Мин: {_minesCount}, Флажков: {_flagsCount} ", row);
+        AddMessageToLine($"Мин: {_mines}, Флажков: {_flags} ", row);
     }
 
     private void AddControlHelpLine(int row)
     {
         AddMessageToLine("Управление:", row);
         AddMessageToLine($"{ConsoleKey.E} - Копать", row + 1);
-        AddMessageToLine($"{ConsoleKey.Q} - Флаг", row + 2);
+        AddMessageToLine($"{ConsoleKey.Q} - Установить флаг", row + 2);
 
         AddMessageToLine($"{ConsoleKey.W}/{ConsoleKey.UpArrow} - Наверх", row + 4);
         AddMessageToLine($"{ConsoleKey.A}/{ConsoleKey.LeftArrow} - Влево", row + 5);
@@ -94,26 +113,10 @@ public class Game
     }
 
 
-    public void Run()
-    {
-        SetWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-        SetBufferSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-        CursorVisible = false;
-
-        InitMediumGame();
-
-        while (!_cts.IsCancellationRequested)
-        {
-            WriteInfo();
-            HandleInput();
-        }
-    }
-
-
     private void WriteInfo()
     {
-        AddInfoLine(_infoPosition);
-        SetMap(_mapPosition);
+        AddInfoLine(INFO_POSITION);
+        SetMap(MAP_POSITION);
     }
 
     private void HandleInput()
@@ -130,7 +133,7 @@ public class Game
 
                 string message;
 
-                if (DigAtPlayerPosition())
+                if (DigAtPlayerPositionAndUpdateDiggedStat())
                     if (!AllWihoutMinesHasDigged())
                         break;
                     else
@@ -140,10 +143,10 @@ public class Game
 
                 Clear();
                 AddHeaderLine();
-                AddMessageToLine(message, _infoPosition);
-                SetDiggedMapWithMines(_mapPosition);
+                AddMessageToLine(message, INFO_POSITION);
+                SetDiggedMapWithMines(MAP_POSITION);
 
-                AddMessageToLine("Нажмите Enter чтобы выйти, или введите R чтобы начать заново: ", _mapHeight + _footerPosition);
+                AddMessageToLine("Нажмите Enter чтобы выйти, или введите R чтобы начать заново: ", _mapHeight + FOOTER_POSITION);
 
                 var strInput = ReadLine()?
                     .ToUpper();
@@ -172,7 +175,7 @@ public class Game
                 return;
 
             case ConsoleKey.Q:
-                SetFlagAtPlayerPosition();
+                SetFlagAtPlayerPositionAndUpdateFlagsInStat();
                 break;
 
             case ConsoleKey.W:
@@ -236,14 +239,14 @@ public class Game
 
     private void Init(int x, int y, int minesCount)
     {
-        Clear();
+        Clear(); // Очистка консоли и сбросы
         _startDate = DateTime.UtcNow;
+        _digged = 0;
+        _mines = minesCount;
+        _flags = minesCount;
 
         _mapWidth = x + 2; // Увеличиваем для границ
         _mapHeight = y + 2;
-
-        _minesCount = minesCount;
-        _flagsCount = minesCount;
 
         var grid = new Cell[_mapWidth, _mapHeight];
 
@@ -281,7 +284,7 @@ public class Game
             if (IsBorder(randomX, randomY) || grid[randomX, randomY].IsMine)
                 continue;
 
-            if (localMinesCount < _minesCount)
+            if (localMinesCount < _mines)
             {
                 grid[randomX, randomY].IsMine = true;
 
@@ -293,32 +296,29 @@ public class Game
             }
         }
 
-        _playerX = _mapWidth / 2; // Ставим игрока по центру
+        _playerX = _mapWidth / 2; // Инициализация игрока
         _playerY = _mapHeight / 2;
-
         grid[_playerX, _playerY].Color = CURSOR_COLOR;
+        grid[_playerX, _playerY].Symbol = CURSOR_SYMBOL;
 
         _map = grid;
         SetMinesCountAround();
 
         AddHeaderLine();
-        AddControlHelpLine(_mapHeight + _footerPosition);
+        AddControlHelpLine(_mapHeight + FOOTER_POSITION);
     }
 
 
     private ConsoleColor GetColorForDefault(int x, int y)
     {
-        if ((x + y) % 2 is 0)
-            return DEFAULT_COLOR_EVEN;
-        else
-            return DEFAULT_COLOR_NOT_EVEN;
+        return (x + y) % 2 is 0 ? DEFAULT_COLOR_EVEN : DEFAULT_COLOR_NOT_EVEN;
     }
 
-    private bool IsBorder(int nextX, int nextY)
+    private bool IsBorder(int x, int y)
     {
         return
-            nextX == 0 || nextY == 0 || // Верхняя и левая граница
-            nextX == _mapWidth - 1 || nextY == _mapHeight - 1; // Нижняя и правая
+            x == 0 || y == 0 || // Верхняя и левая граница
+            x == _mapWidth - 1 || y == _mapHeight - 1; // Нижняя и правая
     }
 
     private void SetMap(int row)
@@ -357,28 +357,6 @@ public class Game
     }
 
 
-    private bool DigAtPlayerPosition()
-    {
-        if (_map[_playerX, _playerY].State is State.Flag)
-            return true;
-
-        BfsDig();
-        Dig(_playerX, _playerY);
-
-        SetSymbolAtPlayerPosition();
-
-        if (_map[_playerX, _playerY].IsMine)
-            return false;
-
-        return true;
-    }
-
-    private void Dig(int x, int y)
-    {
-        _map[x, y].State = State.Digged;
-        SetSymbol(x, y);
-    }
-
     private void BfsDig()
     {
         var queue = new Queue<Cell>();
@@ -398,75 +376,131 @@ public class Game
                     continue;
 
                 queue.Enqueue(item);
-                Dig(item.X, item.Y);
+                SetDiggedAndUpdateDiggedStat(item.X, item.Y);
             }
+        }
+    }
+
+    private bool DigAtPlayerPositionAndUpdateDiggedStat()
+    {
+        if (_map[_playerX, _playerY].State is State.Flag)
+            return true;
+
+        BfsDig();
+        SetDiggedAndUpdateDiggedStat(_playerX, _playerY);
+
+        if (_map[_playerX, _playerY].IsMine)
+            return false;
+
+        return true;
+    }
+
+    private void SetDiggedAndUpdateDiggedStat(int x, int y)
+    {
+        if (_map[x, y].State is not State.Digged && !IsBorder(x, y))
+        {
+            _map[x, y].State = State.Digged;
+            _digged++;
+        }
+
+        if (_map[x, y].MinesAround is not 0)
+        {
+            _map[x, y].Symbol = _map[x, y].MinesAround
+                .ToString()
+                .First();
+
+            switch (_map[x, y].Symbol)
+            {
+                case '1':
+                    _map[x, y].Color = ConsoleColor.Blue;
+                    break;
+
+                case '2':
+                    _map[x, y].Color = ConsoleColor.Green;
+                    break;
+
+                case '3':
+                    _map[x, y].Color = ConsoleColor.Red;
+                    break;
+
+                case '4':
+                    _map[x, y].Color = ConsoleColor.Magenta;
+                    break;
+
+                case '5':
+                    _map[x, y].Color = ConsoleColor.Yellow;
+                    break;
+
+                case '6':
+                    _map[x, y].Color = ConsoleColor.DarkBlue;
+                    break;
+
+                case '7':
+                    _map[x, y].Color = ConsoleColor.DarkMagenta;
+                    break;
+
+                case '8':
+                    _map[x, y].Color = ConsoleColor.DarkGray;
+                    break;
+            }
+        }
+        else
+        {
+            _map[x, y].Symbol = DIGGED_SYMBOL;
+            _map[x, y].Color = DIGGED_COLOR;
         }
     }
 
 
     private bool AllWihoutMinesHasDigged()
     {
-        var minesCount = 0;
-        var diggedCount = 0;
-
-        for (int y = 0; y < _mapHeight; y++)
-            for (int x = 0; x < _mapWidth; x++)
-                if (_map[x, y].IsMine)
-                    minesCount++;
-                else if (_map[x, y].State is State.Digged)
-                    diggedCount++;
-
-        if ((((_mapWidth - 2) * (_mapHeight - 2)) - minesCount) == diggedCount)
-            return true;
-
-        return false;
+        return (((_mapWidth - 2) * (_mapHeight - 2)) - _mines) == _digged;
     }
 
     private void SetMinesCountAround()
     {
         for (int y = 0; y < _mapHeight; y++)
+        {
             for (int x = 0; x < _mapWidth; x++)
+            {
                 if (IsBorder(x, y))
                     continue;
-                else
-                    _map[x, y].MinesAround = GetMinesAroundCount(x, y);
-    }
 
-    private int GetMinesAroundCount(int x, int y)
-    {
-        var cell1 = _map[x - 1, y - 1];
-        var cell2 = _map[x, y - 1];
-        var cell3 = _map[x + 1, y - 1];
+                var cell1 = _map[x - 1, y - 1];
+                var cell2 = _map[x, y - 1];
+                var cell3 = _map[x + 1, y - 1];
 
-        var cell4 = _map[x - 1, y];
-        var cell6 = _map[x + 1, y];
+                var cell4 = _map[x - 1, y];
+                var cell6 = _map[x + 1, y];
 
-        var cell7 = _map[x - 1, y + 1];
-        var cell8 = _map[x, y + 1];
-        var cell9 = _map[x + 1, y + 1];
+                var cell7 = _map[x - 1, y + 1];
+                var cell8 = _map[x, y + 1];
+                var cell9 = _map[x + 1, y + 1];
 
-        int minesAround = 0;
+                int minesAround = 0;
 
-        if (cell1.IsMine)
-            minesAround++;
-        if (cell2.IsMine)
-            minesAround++;
-        if (cell3.IsMine)
-            minesAround++;
+                if (cell1.IsMine)
+                    minesAround++;
+                if (cell2.IsMine)
+                    minesAround++;
+                if (cell3.IsMine)
+                    minesAround++;
 
-        if (cell4.IsMine)
-            minesAround++;
-        if (cell6.IsMine)
-            minesAround++;
+                if (cell4.IsMine)
+                    minesAround++;
+                if (cell6.IsMine)
+                    minesAround++;
 
-        if (cell7.IsMine)
-            minesAround++;
-        if (cell8.IsMine)
-            minesAround++;
-        if (cell9.IsMine)
-            minesAround++;
+                if (cell7.IsMine)
+                    minesAround++;
+                if (cell8.IsMine)
+                    minesAround++;
+                if (cell9.IsMine)
+                    minesAround++;
 
-        return minesAround;
+                _map[x, y].MinesAround = minesAround;
+            }
+        }
     }
 
 
@@ -487,145 +521,71 @@ public class Game
     }
 
 
-
-    private void SetFlagAtPlayerPosition()
+    private void SetFlagAtPlayerPositionAndUpdateFlagsInStat()
     {
-        if (_map[_playerX, _playerY].State is State.Flag)
+        if (_map[_playerX, _playerY].State is State.Default)
         {
-            _map[_playerX, _playerY].State = State.Default;
-            _flagsCount++;
+            SetFlag(_playerX, _playerY);
+            _flags--;
         }
-        else if (_map[_playerX, _playerY].State is State.Default)
+        else if(_map[_playerX, _playerY].State is State.Flag)
         {
-            _map[_playerX, _playerY].State = State.Flag;
-            _flagsCount--;
+            SetDefault(_playerX, _playerY);
+            _flags++;
         }
-
-        SetSymbolAtPlayerPosition();
     }
 
-    private void SetSymbolAtPlayerPosition()
+    private void SetFlag(int x, int y)
     {
-        SetSymbol(_playerX, _playerY);
+        _map[_playerX, _playerY].State = State.Flag;
+        _map[_playerX, _playerY].Symbol = FLAG_SYMBOL;
+        _map[_playerX, _playerY].Color = FLAG_COLOR;
     }
 
-    private void SetSymbol(int x, int y)
+    private void SetDefault(int x, int y)
     {
-        if (_map[x, y].State is State.Default)
-        {
-            _map[x, y].Symbol = DEFAULT_SYMBOL;
-            _map[x, y].Color = GetColorForDefault(x, y);
-        }
-        else if (_map[x, y].State is State.Flag)
-        {
-            _map[x, y].Symbol = FLAG_SYMBOL;
-            _map[x, y].Color = FLAG_COLOR;
-        }
-        else if (_map[x, y].State is State.Digged)
-        {
-            if (_map[x, y].MinesAround is not 0)
-            {
-                _map[x, y].Symbol = _map[x, y].MinesAround
-                    .ToString()
-                    .First();
-
-                switch (_map[x, y].Symbol)
-                {
-                    case '1':
-                        _map[x, y].Color = ConsoleColor.Blue;
-                        break;
-
-                    case '2':
-                        _map[x, y].Color = ConsoleColor.Green;
-                        break;
-
-                    case '3':
-                        _map[x, y].Color = ConsoleColor.Red;
-                        break;
-
-                    case '4':
-                        _map[x, y].Color = ConsoleColor.Magenta;
-                        break;
-
-                    case '5':
-                        _map[x, y].Color = ConsoleColor.Yellow;
-                        break;
-
-                    case '6':
-                        _map[x, y].Color = ConsoleColor.DarkBlue;
-                        break;
-
-                    case '7':
-                        _map[x, y].Color = ConsoleColor.DarkMagenta;
-                        break;
-
-                    case '8':
-                        _map[x, y].Color = ConsoleColor.DarkGray;
-                        break;
-                }
-            }
-            else
-            {
-                _map[x, y].Symbol = DIGGED_SYMBOL;
-                _map[x, y].Color = DIGGED_COLOR;
-            }
-        }
+        _map[_playerX, _playerY].State = State.Default;
+        _map[_playerX, _playerY].Symbol = DEFAULT_SYMBOL;
+        _map[_playerX, _playerY].Color = GetColorForDefault(_playerX, _playerY);
     }
 
 
     private void MoveUp()
     {
-        var newY = _playerY - 1;
-
-        if (IsBorder(_playerX, newY))
-            return;
-
-        _map[_playerX, newY].Symbol = CURSOR_SYMBOL;
-        _map[_playerX, newY].Color = CURSOR_COLOR;
-        SetSymbolAtPlayerPosition();
-
-        _playerY = newY;
+        Move(_playerX, _playerY - 1);
     }
 
     private void MoveDown()
     {
-        var newY = _playerY + 1;
-
-        if (IsBorder(_playerX, newY))
-            return;
-
-        _map[_playerX, newY].Symbol = CURSOR_SYMBOL;
-        _map[_playerX, newY].Color = CURSOR_COLOR;
-        SetSymbolAtPlayerPosition();
-
-        _playerY = newY;
+        Move(_playerX, _playerY + 1);
     }
 
     private void MoveRight()
     {
-        var newX = _playerX + 1;
-
-        if (IsBorder(newX, _playerY))
-            return;
-
-        _map[newX, _playerY].Symbol = CURSOR_SYMBOL;
-        _map[newX, _playerY].Color = CURSOR_COLOR;
-        SetSymbolAtPlayerPosition();
-
-        _playerX = newX;
+        Move(_playerX + 1, _playerY);
     }
 
     private void MoveLeft()
     {
-        var newX = _playerX - 1;
+        Move(_playerX - 1, _playerY);
+    }
 
-        if (IsBorder(newX, _playerY))
+    private void Move(int x, int y)
+    {
+        if (IsBorder(x, y))
             return;
 
-        _map[newX, _playerY].Symbol = CURSOR_SYMBOL;
-        _map[newX, _playerY].Color = CURSOR_COLOR;
-        SetSymbolAtPlayerPosition();
+        _map[x, y].Symbol = CURSOR_SYMBOL;
+        _map[x, y].Color = CURSOR_COLOR;
 
-        _playerX = newX;
+        if (_map[_playerX, _playerY].State is State.Default)
+            SetDefault(_playerX, _playerY);
+        else if (_map[_playerX, _playerY].State is State.Flag)
+            SetFlag(_playerX, _playerY);
+        else if (_map[_playerX, _playerY].State is State.Digged)
+            SetDiggedAndUpdateDiggedStat(_playerX, _playerY);
+
+        _playerX = x;
+        _playerY = y;
     }
 }
