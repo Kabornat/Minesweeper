@@ -20,7 +20,10 @@ public class Game
 
     private const char DEFAULT_SYMBOL = '█';
     private const ConsoleColor DEFAULT_COLOR_EVEN = ConsoleColor.Green;
-    private const ConsoleColor DEFAULT_COLOR_NOT_EVEN =ConsoleColor.DarkGreen;
+    private const ConsoleColor DEFAULT_COLOR_NOT_EVEN = ConsoleColor.DarkGreen;
+
+    private const ConsoleColor BORDER_COLOR = ConsoleColor.DarkGray;
+    private const char BORDER_SYMBOL = '█';
 
     private const ConsoleColor DIGGED_COLOR = ConsoleColor.DarkYellow;
     private const char DIGGED_SYMBOL = ' ';
@@ -31,8 +34,6 @@ public class Game
     private const ConsoleColor MINE_COLOR = ConsoleColor.White;
     private const char MINE_SYMBOL = '*';
 
-    private const ConsoleColor BORDER_COLOR = ConsoleColor.DarkGray;
-    private const char BORDER_SYMBOL = '█';
 
     private const ConsoleColor CURSOR_COLOR = ConsoleColor.White;
     private const char CURSOR_SYMBOL = '█';
@@ -43,18 +44,23 @@ public class Game
     private int _mapWidth;
     private int _mapHeight;
 
-    private int _preset;
+    private int _mapPosition = 4;
+    private int _infoPosition = 2;
+    private int _footerPosition = 5;
+
     private DateTime _startDate;
+    private int _preset;
     private int _minesCount;
     private int _flagsCount;
 
     private int _playerX, _playerY;
 
+    private readonly CancellationTokenSource _cts = new();
     private Cell[,] _map;
 
-    private void AddHeaderLine(int row)
+    private void AddHeaderLine()
     {
-        AddMessageToLine($"{new string('-', (_mapWidth / 2) - 3)} САПЁР {new string('-', (_mapWidth / 2) - 3)}", row);
+        AddMessageToLine($"{new string('-', (_mapWidth / 2) - 3)} САПЁР {new string('-', (_mapWidth / 2) - 3)}", 0);
     }
 
     private void AddInfoLine(int row)
@@ -90,13 +96,13 @@ public class Game
 
     public void Run()
     {
-        InitMediumGame();
-        
         SetWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
         SetBufferSize(SCREEN_WIDTH, SCREEN_HEIGHT);
         CursorVisible = false;
 
-        while (true)
+        InitMediumGame();
+
+        while (!_cts.IsCancellationRequested)
         {
             WriteInfo();
             HandleInput();
@@ -106,8 +112,8 @@ public class Game
 
     private void WriteInfo()
     {
-        AddInfoLine(3);
-        SetMap(5);
+        AddInfoLine(_infoPosition);
+        SetMap(_mapPosition);
     }
 
     private void HandleInput()
@@ -133,11 +139,11 @@ public class Game
                     message = $"Взрыв! Время: {diff}";
 
                 Clear();
-                AddHeaderLine(1);
-                AddMessageToLine(message, 3);
-                SetDiggedMapWithMines(5);
+                AddHeaderLine();
+                AddMessageToLine(message, _infoPosition);
+                SetDiggedMapWithMines(_mapPosition);
 
-                AddMessageToLine("Нажмите Enter чтобы выйти, или введите R чтобы начать заново: ", _mapHeight + 7);
+                AddMessageToLine("Нажмите Enter чтобы выйти, или введите R чтобы начать заново: ", _mapHeight + _footerPosition);
 
                 var strInput = ReadLine()?
                     .ToUpper();
@@ -162,6 +168,7 @@ public class Game
                     }
                     break;
                 }
+                _cts.Cancel();
                 return;
 
             case ConsoleKey.Q:
@@ -203,6 +210,7 @@ public class Game
 
             case ConsoleKey.Escape:
             case ConsoleKey.X:
+                _cts.Cancel();
                 return;
         }
     }
@@ -248,7 +256,7 @@ public class Game
                 if (IsBorder(xI, yI))
                 {
                     cell.Symbol = BORDER_SYMBOL;
-                    cell.Color = ConsoleColor.DarkGray;
+                    cell.Color = BORDER_COLOR;
                 }
                 else
                 {
@@ -293,8 +301,8 @@ public class Game
         _map = grid;
         SetMinesCountAround();
 
-        AddHeaderLine(1);
-        AddControlHelpLine(_mapHeight + 6);
+        AddHeaderLine();
+        AddControlHelpLine(_mapHeight + _footerPosition);
     }
 
 
