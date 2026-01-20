@@ -268,6 +268,7 @@ public class Game
                     }
                     return;
                 }
+                GameInfo.GameIsRunning = false;
                 return;
 
             case ConsoleKey.Q:
