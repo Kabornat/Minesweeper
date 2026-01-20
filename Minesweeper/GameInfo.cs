@@ -2,6 +2,49 @@
 
 public struct GameInfo(Difficulty difficulty)
 {
+    public const ConsoleColor TEXT_COLOR = ConsoleColor.White;
+
+    public const ConsoleColor DEFAULT_COLOR_EVEN = ConsoleColor.Green;
+    public const ConsoleColor DEFAULT_COLOR_NOT_EVEN = ConsoleColor.DarkGreen;
+    public const char DEFAULT_SYMBOL = '█';
+
+    public const ConsoleColor BORDER_COLOR = ConsoleColor.DarkGray;
+    public const char BORDER_SYMBOL = '█';
+
+    public const ConsoleColor DIGGED_COLOR = ConsoleColor.DarkYellow;
+    public const char DIGGED_SYMBOL = ' ';
+
+    public readonly Dictionary<char, ConsoleColor> NumberColors = new()
+    {
+        {'1', ConsoleColor.Blue},
+        {'2', ConsoleColor.Green},
+        {'3', ConsoleColor.Red},
+        {'4', ConsoleColor.Magenta},
+        {'5', ConsoleColor.Yellow},
+        {'6', ConsoleColor.DarkBlue},
+        {'7', ConsoleColor.DarkMagenta},
+        {'8', ConsoleColor.DarkGray},
+    };
+
+    public const ConsoleColor FLAG_COLOR = ConsoleColor.DarkRed;
+    public const char FLAG_SYMBOL = '█';
+
+    public const ConsoleColor MINE_COLOR = ConsoleColor.White;
+    public const ConsoleColor EXPLORED_MINE_COLOR = ConsoleColor.Red;
+    public const char MINE_SYMBOL = '*';
+
+
+    public const ConsoleColor CURSOR_COLOR = ConsoleColor.White;
+    public const char CURSOR_SYMBOL = '█';
+
+    public const int SCREEN_WIDTH = 100;
+    public const int SCREEN_HEIGHT = 50;
+
+    public const int MAP_ROW = 4;
+    public const int INFO_ROW = 2;
+
+    public const int FOOTER_ROW = 5;
+
     public int MapWidth { get; set; } = difficulty.MapWitdh;
     public int MapHeight { get; set; } = difficulty.MapHeight;
 
