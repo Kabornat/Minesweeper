@@ -5,8 +5,8 @@ namespace Minesweeper;
 public class Game
 {
     private readonly Difficulty EasyDifficulty = new(mapWidth: 9, mapHeight: 9, minesCount: 10, preset: 1);
-    private readonly Difficulty MediumDifficulty = new(mapWidth: 16, mapHeight: 16, minesCount: 40, preset: 2);
-    private readonly Difficulty HighDifficulty = new(mapWidth: 30, mapHeight: 16, minesCount: 99, preset: 3);
+    private readonly Difficulty MediumDifficulty = new(mapWidth: 17, mapHeight: 16, minesCount: 40, preset: 2);
+    private readonly Difficulty HighDifficulty = new(mapWidth: 31, mapHeight: 16, minesCount: 99, preset: 3);
 
     private const ConsoleColor TEXT_COLOR = ConsoleColor.White;
 
