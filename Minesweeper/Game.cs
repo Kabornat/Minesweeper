@@ -332,7 +332,7 @@ public class Game
         {
             for (int xI = x - 1; xI <= x + 1; xI++)
             {
-                if (IsBorder(x, y))
+                if (IsBorder(xI, yI))
                     continue;
 
                 var cell = _map[xI, yI];
