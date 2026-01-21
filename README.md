@@ -1,6 +1,6 @@
 **Сапёр на C#**
 
-<img width="359" height="568" alt="image" src="https://github.com/user-attachments/assets/7fc876c2-f7ce-44eb-999e-7281b4f87bd2" />
+<img width="395" height="615" alt="image" src="https://github.com/user-attachments/assets/3bc6259f-123f-40b8-b997-ff1f412eb313" />
 
 Консольная версия игры, есть 3 сложности
 
