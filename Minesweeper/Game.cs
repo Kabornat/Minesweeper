@@ -291,7 +291,7 @@ public class Game
                 BfsDig(cell.X, cell.Y);
         }
 
-        if (AllWihoutMinesHasDigged())
+        if (AllWithoutMinesHasDigged())
             GameOver(isWin: true);
 
         else if (!GameInfo.GameIsRunning)
@@ -449,8 +449,8 @@ public class Game
 
         return cells;
     } 
-
-    private bool AllWihoutMinesHasDigged()
+    
+    private bool AllWithoutMinesHasDigged()
     {
         return (((GameInfo.MapWidth - 2) * (GameInfo.MapHeight - 2)) - GameInfo.MinesCount) == GameInfo.DiggedCount;
     }
