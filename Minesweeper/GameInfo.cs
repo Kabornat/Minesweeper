@@ -14,16 +14,16 @@ public struct GameInfo(Difficulty difficulty)
     public const ConsoleColor DIGGED_COLOR = ConsoleColor.DarkYellow;
     public const char DIGGED_SYMBOL = ' ';
 
-    public readonly Dictionary<char, ConsoleColor> NumberColors = new()
+    public readonly Dictionary<int, ConsoleColor> NumberColors = new()
     {
-        {'1', ConsoleColor.Blue},
-        {'2', ConsoleColor.Green},
-        {'3', ConsoleColor.Red},
-        {'4', ConsoleColor.Magenta},
-        {'5', ConsoleColor.Yellow},
-        {'6', ConsoleColor.DarkBlue},
-        {'7', ConsoleColor.DarkMagenta},
-        {'8', ConsoleColor.DarkGray},
+        {1, ConsoleColor.Blue},
+        {2, ConsoleColor.Green},
+        {3, ConsoleColor.Red},
+        {4, ConsoleColor.Magenta},
+        {5, ConsoleColor.Yellow},
+        {6, ConsoleColor.DarkBlue},
+        {7, ConsoleColor.DarkMagenta},
+        {8, ConsoleColor.DarkGray},
     };
 
     public const ConsoleColor FLAG_COLOR = ConsoleColor.DarkRed;
@@ -45,8 +45,8 @@ public struct GameInfo(Difficulty difficulty)
 
     public const int FOOTER_ROW = 5;
 
-    public int MapWidth { get; set; } = difficulty.MapWitdh;
-    public int MapHeight { get; set; } = difficulty.MapHeight;
+    public int MapWidth { get; set; } = difficulty.MapWitdh + 2; // Увеличиваем для границ
+    public int MapHeight { get; set; } = difficulty.MapHeight + 2;
 
     public DateTime StartDate { get; set; } = DateTime.UtcNow;
     public int Preset { get; set; } = difficulty.Preset;
@@ -60,4 +60,15 @@ public struct GameInfo(Difficulty difficulty)
 
     public bool ItsFirstMove { get; set; } = true;
     public bool GameIsRunning { get; set; } = true;
+
+
+    public ConsoleColor GetColorForDefault(in int x, in int y)
+    {
+        return (x + y) % 2 is 0 ? GameInfo.DEFAULT_COLOR_EVEN : GameInfo.DEFAULT_COLOR_NOT_EVEN;
+    }
+
+    public TimeSpan GetTimeDifference()
+    {
+        return DateTime.UtcNow.Subtract(StartDate);
+    }
 }
