@@ -1,15 +1,34 @@
-﻿using static System.Console;
-
-namespace Minesweeper;
+﻿namespace Minesweeper;
 
 public class Game
 {
-    private readonly Difficulty EasyDifficulty = new(mapWidth: 9, mapHeight: 9, minesCount: 10, preset: 1);
-    private readonly Difficulty MediumDifficulty = new(mapWidth: 17, mapHeight: 17, minesCount: 40, preset: 2);
-    private readonly Difficulty HighDifficulty = new(mapWidth: 31, mapHeight: 16, minesCount: 99, preset: 3);
+    public Game()
+    {
+        Control.AddDigAction(Dig);
+        Control.AddFlagAction(SetFlagAndUpdateFlagsInStat);
 
+        Control.AddMoveUpAction(MoveUp);
+        Control.AddMoveLeftAction(MoveLeft);
+        Control.AddMoveDownAction(MoveDown);
+        Control.AddMoveRightAction(MoveRight);
+
+        Control.AddEasyDifficultAction(InitEasy);
+        Control.AddMediumDifficultAction(InitMedium);
+        Control.AddHardDifficultAction(InitHigh);
+
+        Control.AddLeaveAction(StopGame);
+    }
+
+    private readonly Control Control = new();
+
+
+    private readonly Difficulty EasyDifficulty = new(mapWidth: 9, mapHeight: 9, minesCount: 10, preset: GameInfo.EASY_PRESET);
+    private readonly Difficulty MediumDifficulty = new(mapWidth: 17, mapHeight: 17, minesCount: 40, preset: GameInfo.MEDIUM_PRESET);
+    private readonly Difficulty HighDifficulty = new(mapWidth: 31, mapHeight: 16, minesCount: 99, preset: GameInfo.HARD_PRESET);
+
+    private readonly ConsoleRenderer ConsoleRenderer;
     private GameInfo GameInfo;
-    private Cell[,] _map;
+    private Cell[,] Map;
 
 
     private void InitEasy()
@@ -29,10 +48,10 @@ public class Game
 
     private void Init(in Difficulty difficulty)
     {
-        ClearConsole(); // Очистка консоли и сбросы
+        ConsoleRenderer.ClearConsole(); // Очистка консоли и сбросы
         GameInfo = new(difficulty);
 
-        var grid = new Cell[GameInfo.MapWidth, GameInfo.MapHeight];
+        Map = new Cell[GameInfo.MapWidth, GameInfo.MapHeight];
 
         for (int yI = 0; yI < GameInfo.MapHeight; yI++)
         {
@@ -51,17 +70,12 @@ public class Game
                     cell.Color = GameInfo.GetColorForDefault(xI, yI);
                 }
 
-                grid[xI, yI] = cell;
+                Map[xI, yI] = cell;
             }
         }
 
-        _map = grid;
-
-        GameInfo.PlayerX = GameInfo.MapWidth / 2; // Инициализация игрока
-        GameInfo.PlayerY = GameInfo.MapHeight / 2;
-
-        _map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.CURSOR_COLOR;
-        _map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.CURSOR_SYMBOL;
+        Map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.CURSOR_COLOR;
+        Map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.CURSOR_SYMBOL;
 
         var localMinesCount = 0;
         while (true)
@@ -71,7 +85,7 @@ public class Game
 
             if (localMinesCount < GameInfo.MinesCount)
             {
-                _map[x, y].IsMine = true;
+                Map[x, y].IsMine = true;
                 localMinesCount++;
             }
             else
@@ -82,8 +96,8 @@ public class Game
 
         SetMinesCountAround();
 
-        WriteHeader();
-        WriteControlHelpLine(GameInfo.MapHeight + GameInfo.FOOTER_ROW);
+        ConsoleRenderer.WriteHeader(GameInfo.MapWidth);
+        ConsoleRenderer.WriteControlHelpLine(GameInfo.MapHeight, Control);
     }
 
     private bool IsBorder(in int x, in int y)
@@ -93,19 +107,13 @@ public class Game
             x == GameInfo.MapWidth - 1 || y == GameInfo.MapHeight - 1; // Нижняя и правая
     }
 
-    private void ClearConsole()
-    {
-        SetCursorPosition(0, 0);
-        Write(new string(' ', GameInfo.SCREEN_WIDTH * GameInfo.SCREEN_HEIGHT));
-    }
-
 
     private bool TryGetRandomPositionWithoutBorderAndMine(out int x, out int y)
     {
         x = Random.Shared.Next(GameInfo.MapWidth);
         y = Random.Shared.Next(GameInfo.MapHeight);
 
-        if (IsBorder(x, y) || _map[x, y].IsMine)
+        if (IsBorder(x, y) || Map[x, y].IsMine)
             return false;
 
         return true;
@@ -124,51 +132,20 @@ public class Game
 
                 for (int yI = y - 1; yI <= y + 1; yI++)
                     for (int xI = x - 1; xI <= x + 1; xI++)
-                        if (_map[xI, yI].IsMine)
+                        if (Map[xI, yI].IsMine)
                             minesAround++;
 
-                _map[x, y].MinesAround = minesAround;
+                Map[x, y].MinesAround = minesAround;
                 minesAround = 0;
             }
         }
     }
 
-    private void WriteHeader()
-    {
-        WriteMessage($"{new string('-', (GameInfo.MapWidth / 2) - 3)} САПЁР {new string('-', (GameInfo.MapWidth / 2) - 3)}");
-    }
-
-    private void WriteControlHelpLine(in int row)
-    {
-        WriteMessage("Управление:", row);
-
-        WriteMessage($"{ConsoleKey.E} - Копать", row + 2);
-        WriteMessage($"{ConsoleKey.Q} - Установить флаг", row + 3);
-
-        WriteMessage($"{ConsoleKey.W}/{ConsoleKey.UpArrow} - Наверх", row + 5);
-        WriteMessage($"{ConsoleKey.A}/{ConsoleKey.LeftArrow} - Влево", row + 6);
-        WriteMessage($"{ConsoleKey.S}/{ConsoleKey.DownArrow} - Вниз", row + 7);
-        WriteMessage($"{ConsoleKey.D}/{ConsoleKey.RightArrow} - Вправо", row + 8);
-
-        WriteMessage($"{1} - Легкая сложность", row + 10);
-        WriteMessage($"{2} - Средняя сложность", row + 11);
-        WriteMessage($"{3} - Высокая сложность", row + 12);
-
-        WriteMessage($"{ConsoleKey.Escape}/{ConsoleKey.X} - Выход", row + 14);
-    }
-
-    private void WriteMessage(in string message, in int row = 0)
-    {
-        SetCursorPosition(0, row);
-        ForegroundColor = GameInfo.TEXT_COLOR;
-        Write(message);
-    }
-
 
     public void Run()
     {
-        SetWindowSize(GameInfo.SCREEN_WIDTH, GameInfo.SCREEN_HEIGHT);
-        CursorVisible = false;
+        Console.SetWindowSize(GameInfo.SCREEN_WIDTH, GameInfo.SCREEN_HEIGHT);
+        Console.CursorVisible = false;
 
         InitMedium();
 
@@ -176,116 +153,41 @@ public class Game
         {
             while (GameInfo.GameIsRunning)
             {
-                WriteInfo();
+                ConsoleRenderer.WriteInfo(GameInfo.MinesCount, GameInfo.FlagsCount, GameInfo.MapWidth, GameInfo.MapHeight, Map);
                 HandleInput();
             }
         }
         catch (ArgumentOutOfRangeException ex)
         {
-            ClearConsole();
-            WriteMessage(ex.Message);
-            ReadLine();
+            ConsoleRenderer.ClearConsole();
+            ConsoleRenderer.WriteMessage(ex.Message);
+            Console.ReadLine();
         }
     }
-
-
-    private void WriteInfo()
-    {
-        WriteInfoLine();
-        WriteMap();
-    }
-
-    private void WriteInfoLine()
-    {
-        WriteMessage($"Мин: {GameInfo.MinesCount}, Флажков: {GameInfo.FlagsCount} ", GameInfo.INFO_ROW);
-    }
-
-    private void WriteMap()
-    {
-        for (int y = 0; y < GameInfo.MapHeight; y++)
-        {
-            for (int x = 0; x < GameInfo.MapWidth; x++)
-            {
-                ForegroundColor = _map[x, y].Color;
-                SetCursorPosition(x, y + GameInfo.MAP_ROW);
-                Write(_map[x, y].Symbol);
-            }
-        }
-    }
-
 
     private void HandleInput()
     {
-        if (!KeyAvailable)
+        if (!Console.KeyAvailable)
             return;
 
-        var input = ReadKey(true).Key;
-
-        switch (input)
-        {
-            case ConsoleKey.E:
-                Dig();
-                return;
-
-            case ConsoleKey.Q:
-                SetFlagAndUpdateFlagsInStat();
-                return;
-
-            case ConsoleKey.W:
-            case ConsoleKey.UpArrow:
-                MoveUp();
-                return;
-
-            case ConsoleKey.A:
-            case ConsoleKey.LeftArrow:
-                MoveLeft();
-                return;
-
-            case ConsoleKey.S:
-            case ConsoleKey.DownArrow:
-                MoveDown();
-                return;
-
-            case ConsoleKey.D:
-            case ConsoleKey.RightArrow:
-                MoveRight();
-                return;
-
-
-            case ConsoleKey.D1:
-                InitEasy();
-                return;
-
-            case ConsoleKey.D2:
-                InitMedium();
-                return;
-
-            case ConsoleKey.D3:
-                InitHigh();
-                return;
-
-
-            case ConsoleKey.Escape:
-            case ConsoleKey.X:
-                GameInfo.GameIsRunning = false;
-                return;
-        }
+        if (Control.ControlActions.TryGetValue(Console.ReadKey(true).Key, out var action))
+            action();
     }
 
     private void Dig()
     {
-        if (_map[GameInfo.PlayerX, GameInfo.PlayerY].State is State.Flag)
+        if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsFlag())
             return;
 
         BfsDig(GameInfo.PlayerX, GameInfo.PlayerY);
 
         var flaggedCellsAround = GetFlaggedCellsAround();
 
-        if (flaggedCellsAround.Count is not 0 && flaggedCellsAround.Count == _map[GameInfo.PlayerX, GameInfo.PlayerY].MinesAround)
+        if (flaggedCellsAround.Count is not 0 && flaggedCellsAround.Count == Map[GameInfo.PlayerX, GameInfo.PlayerY].MinesAround)
         {
             foreach (var flaggedCell in flaggedCellsAround)
                 if (!flaggedCell.IsMine && GameInfo.GameIsRunning)
-                    GameInfo.GameIsRunning = false;
+                    StopGame();
 
             foreach (var cell in GetCellsAround(GameInfo.PlayerX, GameInfo.PlayerY, withFlaggedCells: false))
                 BfsDig(cell.X, cell.Y);
@@ -303,7 +205,7 @@ public class Game
         DigAndUpdateDiggedStat(x, y);
 
         var queue = new Queue<Cell>();
-        queue.Enqueue(_map[x, y]);
+        queue.Enqueue(Map[x, y]);
 
         while (queue.Count > 0)
         {
@@ -335,7 +237,7 @@ public class Game
                 if (IsBorder(xI, yI))
                     continue;
 
-                var cell = _map[xI, yI];
+                var cell = Map[xI, yI];
 
                 if (!withFlaggedCells && cell.IsFlag())
                     continue;
@@ -347,29 +249,29 @@ public class Game
 
     private void DigAndUpdateDiggedStat(in int x, in int y)
     {
-        if (IsBorder(x, y) || _map[x, y].IsFlag())
+        if (IsBorder(x, y) || Map[x, y].IsFlag())
             return;
 
-        if (!_map[x, y].IsDigged())
+        if (!Map[x, y].IsDigged())
         {
-            _map[x, y].State = State.Digged;
+            Map[x, y].State = State.Digged;
             GameInfo.DiggedCount++;
         }
 
-        if (_map[x, y].IsMine)
+        if (Map[x, y].IsMine)
         {
             if (GameInfo.ItsFirstMove)
             {
                 GameInfo.ItsFirstMove = false;
 
-                while (_map[GameInfo.PlayerX, GameInfo.PlayerY].IsMine)
+                while (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsMine)
                 {
-                    _map[GameInfo.PlayerX, GameInfo.PlayerY].IsMine = false;
+                    Map[GameInfo.PlayerX, GameInfo.PlayerY].IsMine = false;
 
                     if (!TryGetRandomPositionWithoutBorderAndMine(out var randomX, out var randomY))
                         continue;
 
-                    _map[randomX, randomY].IsMine = true;
+                    Map[randomX, randomY].IsMine = true;
                 }
 
                 SetMinesCountAround();
@@ -377,7 +279,7 @@ public class Game
             }
             else
             {
-                GameInfo.GameIsRunning = false;
+                StopGame();
                 return;
             }
         }
@@ -391,50 +293,40 @@ public class Game
 
     private void GameOver(bool isWin)
     {
-        GameInfo.GameIsRunning = false;
+        StopGame();
 
-        ClearConsole();
-        WriteHeader();
-        WriteMapWithMines();
+        ConsoleRenderer.WriteGameOver(isWin, GameInfo.MapWidth, GameInfo.MapHeight, Map, GameInfo.PlayerX, GameInfo.PlayerY, GameInfo.GetTimeDifference());
 
-        if (isWin)
-            WriteMessage($"Победа! Время: {GameInfo.GetTimeDifference()}", GameInfo.INFO_ROW);
-        else
-            WriteMessage($"Взрыв! Время: {GameInfo.GetTimeDifference()}", GameInfo.INFO_ROW);
+        if (Console.ReadLine()?.ToUpper() != "R")
+            return;
 
-        WriteMessage("Нажмите Enter чтобы выйти, или введите R чтобы начать заново: ", GameInfo.MapHeight + GameInfo.FOOTER_ROW);
-        var strInput = ReadLine()?.ToUpper();
-
-        if (strInput == "R")
+        switch (GameInfo.Preset)
         {
-            switch (GameInfo.Preset)
-            {
-                case 1:
-                    InitEasy();
-                    return;
+            case GameInfo.EASY_PRESET:
+                InitEasy();
+                return;
 
-                case 2:
-                    InitMedium();
-                    return;
+            case GameInfo.MEDIUM_PRESET:
+                InitMedium();
+                return;
 
-                case 3:
-                    InitHigh();
-                    return;
-            }
+            case GameInfo.HARD_PRESET:
+                InitHigh();
+                return;
         }
     }
 
     private void SetDigged(in int x, in int y)
     {
-        if (_map[x, y].MinesAround is not 0)
+        if (Map[x, y].MinesAround is not 0)
         {
-            _map[x, y].Symbol = _map[x, y].MinesAround.ToString().First();
-            _map[x, y].Color = GameInfo.NumberColors[_map[x, y].MinesAround];
+            Map[x, y].Symbol = Map[x, y].MinesAround.ToString().First();
+            Map[x, y].Color = GameInfo.NumberColors[Map[x, y].MinesAround];
         }
         else
         {
-            _map[x, y].Symbol = GameInfo.DIGGED_SYMBOL;
-            _map[x, y].Color = GameInfo.DIGGED_COLOR;
+            Map[x, y].Symbol = GameInfo.DIGGED_SYMBOL;
+            Map[x, y].Color = GameInfo.DIGGED_COLOR;
         }
     }
 
@@ -444,8 +336,8 @@ public class Game
 
         for (int y = GameInfo.PlayerY - 1; y <= GameInfo.PlayerY + 1; y++)
             for (int x = GameInfo.PlayerX - 1; x <= GameInfo.PlayerX + 1; x++)
-                if (_map[x, y].IsFlag())
-                    cells.Add(_map[x, y]);
+                if (Map[x, y].IsFlag())
+                    cells.Add(Map[x, y]);
 
         return cells;
     } 
@@ -455,30 +347,9 @@ public class Game
         return (((GameInfo.MapWidth - 2) * (GameInfo.MapHeight - 2)) - GameInfo.MinesCount) == GameInfo.DiggedCount;
     }
 
-    private void WriteMapWithMines()
+    public void StopGame()
     {
-        for (int y = 0; y < GameInfo.MapHeight; y++)
-        {
-            for (int x = 0; x < GameInfo.MapWidth; x++)
-            {
-                if (_map[x, y].IsMine)
-                {
-                    if (GameInfo.PlayerX == x && GameInfo.PlayerY == y)
-                        ForegroundColor = GameInfo.EXPLORED_MINE_COLOR;
-                    else
-                        ForegroundColor = GameInfo.MINE_COLOR;
-
-                    SetCursorPosition(x, y + GameInfo.MAP_ROW);
-                    Write(GameInfo.MINE_SYMBOL);
-                }
-                else
-                {
-                    SetCursorPosition(x, y + GameInfo.MAP_ROW);
-                    ForegroundColor = _map[x, y].Color;
-                    Write(_map[x, y].Symbol);
-                }
-            }
-        }
+        GameInfo.GameIsRunning = false;
     }
 
 
@@ -507,14 +378,14 @@ public class Game
         if (IsBorder(x, y))
             return;
 
-        _map[x, y].Symbol = GameInfo.CURSOR_SYMBOL;
-        _map[x, y].Color = GameInfo.CURSOR_COLOR;
+        Map[x, y].Symbol = GameInfo.CURSOR_SYMBOL;
+        Map[x, y].Color = GameInfo.CURSOR_COLOR;
 
-        if (_map[GameInfo.PlayerX, GameInfo.PlayerY].IsDefault())
+        if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsDefault())
             SetDefault();
-        else if (_map[GameInfo.PlayerX, GameInfo.PlayerY].IsFlag())
+        else if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsFlag())
             SetFlag();
-        else if (_map[GameInfo.PlayerX, GameInfo.PlayerY].IsDigged())
+        else if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsDigged())
             SetDigged(GameInfo.PlayerX, GameInfo.PlayerY);
 
         GameInfo.PlayerX = x;
@@ -523,16 +394,16 @@ public class Game
 
     private void SetDefault()
     {
-        _map[GameInfo.PlayerX, GameInfo.PlayerY].State = State.Default;
-        _map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.DEFAULT_SYMBOL;
-        _map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.GetColorForDefault(GameInfo.PlayerX, GameInfo.PlayerY);
+        Map[GameInfo.PlayerX, GameInfo.PlayerY].State = State.Default;
+        Map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.DEFAULT_SYMBOL;
+        Map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.GetColorForDefault(GameInfo.PlayerX, GameInfo.PlayerY);
     }
 
     private void SetFlag()
     {
-        _map[GameInfo.PlayerX, GameInfo.PlayerY].State = State.Flag;
-        _map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.FLAG_SYMBOL;
-        _map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.FLAG_COLOR;
+        Map[GameInfo.PlayerX, GameInfo.PlayerY].State = State.Flag;
+        Map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.FLAG_SYMBOL;
+        Map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.FLAG_COLOR;
     }
 
     private void SetFlagAndUpdateFlagsInStat()
@@ -540,12 +411,12 @@ public class Game
         if (GameInfo.ItsFirstMove)
             return;
 
-        if (_map[GameInfo.PlayerX, GameInfo.PlayerY].IsDefault())
+        if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsDefault())
         {
             SetFlag();
             GameInfo.FlagsCount--;
         }
-        else if (_map[GameInfo.PlayerX, GameInfo.PlayerY].IsFlag())
+        else if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsFlag())
         {
             SetDefault();
             GameInfo.FlagsCount++;

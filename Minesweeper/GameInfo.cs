@@ -2,6 +2,10 @@
 
 public struct GameInfo(Difficulty difficulty)
 {
+    public const int EASY_PRESET = 1;
+    public const int MEDIUM_PRESET = 2;
+    public const int HARD_PRESET = 3;
+
     public const ConsoleColor TEXT_COLOR = ConsoleColor.White;
 
     public const ConsoleColor DEFAULT_COLOR_EVEN = ConsoleColor.Green;
@@ -40,12 +44,7 @@ public struct GameInfo(Difficulty difficulty)
     public const int SCREEN_WIDTH = 100;
     public const int SCREEN_HEIGHT = 50;
 
-    public const int MAP_ROW = 4;
-    public const int INFO_ROW = 2;
-
-    public const int FOOTER_ROW = 5;
-
-    public int MapWidth { get; set; } = difficulty.MapWitdh + 2; // Увеличиваем для границ
+    public int MapWidth { get; set; } = difficulty.MapWidth + 2; // Увеличиваем для границ
     public int MapHeight { get; set; } = difficulty.MapHeight + 2;
 
     public DateTime StartDate { get; set; } = DateTime.UtcNow;
@@ -55,8 +54,8 @@ public struct GameInfo(Difficulty difficulty)
     public int MinesCount { get; set; } = difficulty.MinesCount;
     public int FlagsCount { get; set; } = difficulty.MinesCount;
 
-    public int PlayerX { get; set; } = 0;
-    public int PlayerY { get; set; } = 0;
+    public int PlayerX { get; set; } = (difficulty.MapWidth + 2) / 2; // Инициализация игрока по центру карты
+    public int PlayerY { get; set; } = (difficulty.MapHeight + 2) / 2;
 
     public bool ItsFirstMove { get; set; } = true;
     public bool GameIsRunning { get; set; } = true;
@@ -64,7 +63,7 @@ public struct GameInfo(Difficulty difficulty)
 
     public ConsoleColor GetColorForDefault(in int x, in int y)
     {
-        return (x + y) % 2 is 0 ? GameInfo.DEFAULT_COLOR_EVEN : GameInfo.DEFAULT_COLOR_NOT_EVEN;
+        return (x + y) % 2 is 0 ? DEFAULT_COLOR_EVEN : DEFAULT_COLOR_NOT_EVEN;
     }
 
     public TimeSpan GetTimeDifference()
