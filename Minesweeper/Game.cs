@@ -16,7 +16,7 @@ public class Game
         Control.AddMediumDifficultAction(InitMedium);
         Control.AddHardDifficultAction(InitHigh);
 
-        Control.AddLeaveAction(StopGame);
+        Control.AddLeaveAction(GameInfo.StopGame);
     }
 
     private readonly Control Control = new();
@@ -28,7 +28,7 @@ public class Game
 
     private readonly ConsoleRenderer ConsoleRenderer;
     private GameInfo GameInfo;
-    private Cell[,] Map;
+    private Cell[,] Map = new Cell[10,10];
 
 
     private void InitEasy()
@@ -74,10 +74,13 @@ public class Game
             }
         }
 
-        Map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.CURSOR_COLOR;
-        Map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.CURSOR_SYMBOL;
+        var playerCell = Map[GameInfo.PlayerX, GameInfo.PlayerY];
+
+        playerCell.Color = GameInfo.CURSOR_COLOR;
+        playerCell.Symbol = GameInfo.CURSOR_SYMBOL;
 
         var localMinesCount = 0;
+
         while (true)
         {
             if (!TryGetRandomPositionWithoutBorderAndMine(out var x, out var y))
@@ -176,21 +179,23 @@ public class Game
 
     private void Dig()
     {
-        if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsFlag())
+        var playerCell = Map[GameInfo.PlayerX, GameInfo.PlayerY];
+
+        if (playerCell.IsFlag())
             return;
 
-        BfsDig(GameInfo.PlayerX, GameInfo.PlayerY);
+        BfsDig(playerCell);
 
-        var flaggedCellsAround = GetFlaggedCellsAround();
+        var flaggedCellsAround = GetFlaggedCellsAround(playerCell.X, playerCell.Y);
 
-        if (flaggedCellsAround.Count is not 0 && flaggedCellsAround.Count == Map[GameInfo.PlayerX, GameInfo.PlayerY].MinesAround)
+        if (flaggedCellsAround.Count is not 0 && flaggedCellsAround.Count == playerCell.MinesAround)
         {
             foreach (var flaggedCell in flaggedCellsAround)
                 if (!flaggedCell.IsMine && GameInfo.GameIsRunning)
-                    StopGame();
+                    GameInfo.StopGame();
 
-            foreach (var cell in GetCellsAround(GameInfo.PlayerX, GameInfo.PlayerY, withFlaggedCells: false))
-                BfsDig(cell.X, cell.Y);
+            foreach (var cell in GetCellsAround(playerCell.X, playerCell.Y, withFlaggedCells: false))
+                BfsDig(cell);
         }
 
         if (AllWithoutMinesHasDigged())
@@ -200,21 +205,21 @@ public class Game
             GameOver(isWin: false);
     }
 
-    private void BfsDig(in int x, in int y)
+    private void BfsDig(in Cell cell)
     {
-        DigAndUpdateDiggedStat(x, y);
+        DigAndUpdateDiggedStat(cell);
 
         var queue = new Queue<Cell>();
-        queue.Enqueue(Map[x, y]);
+        queue.Enqueue(cell);
 
         while (queue.Count > 0)
         {
-            var cell = queue.Dequeue();
+            var currentCell = queue.Dequeue();
 
-            if (cell.MinesAround is not 0)
+            if (currentCell.MinesAround is not 0)
                 continue;
 
-            foreach (var item in GetCellsAround(cell.X, cell.Y))
+            foreach (var item in GetCellsAround(currentCell.X, currentCell.Y))
             {
                 if (IsBorder(item.X, item.Y) || item.IsFlag() || item.IsDigged())
                     continue;
@@ -223,7 +228,7 @@ public class Game
                     return;
 
                 queue.Enqueue(item);
-                DigAndUpdateDiggedStat(item.X, item.Y);
+                DigAndUpdateDiggedStat(item);
             }
         }
     }
@@ -247,26 +252,28 @@ public class Game
         }
     }
 
-    private void DigAndUpdateDiggedStat(in int x, in int y)
+    private void DigAndUpdateDiggedStat(in Cell cell)
     {
-        if (IsBorder(x, y) || Map[x, y].IsFlag())
+        if (IsBorder(cell.X, cell.Y) || cell.IsFlag())
             return;
 
-        if (!Map[x, y].IsDigged())
+        if (!cell.IsDigged())
         {
-            Map[x, y].State = State.Digged;
+            cell.State = State.Digged;
             GameInfo.DiggedCount++;
         }
 
-        if (Map[x, y].IsMine)
+        if (cell.IsMine)
         {
             if (GameInfo.ItsFirstMove)
             {
                 GameInfo.ItsFirstMove = false;
 
-                while (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsMine)
+                var playerCell = Map[GameInfo.PlayerX, GameInfo.PlayerY];
+
+                while (playerCell.IsMine)
                 {
-                    Map[GameInfo.PlayerX, GameInfo.PlayerY].IsMine = false;
+                    playerCell.IsMine = false;
 
                     if (!TryGetRandomPositionWithoutBorderAndMine(out var randomX, out var randomY))
                         continue;
@@ -275,11 +282,11 @@ public class Game
                 }
 
                 SetMinesCountAround();
-                BfsDig(GameInfo.PlayerX, GameInfo.PlayerY);
+                BfsDig(playerCell);
             }
             else
             {
-                StopGame();
+                GameInfo.StopGame();
                 return;
             }
         }
@@ -288,56 +295,50 @@ public class Game
             GameInfo.ItsFirstMove = false;
         }
 
-        SetDigged(x, y);
+        SetDigged(cell);
     }
 
     private void GameOver(bool isWin)
     {
-        StopGame();
+        GameInfo.StopGame();
 
         ConsoleRenderer.WriteGameOver(isWin, GameInfo.MapWidth, GameInfo.MapHeight, Map, GameInfo.PlayerX, GameInfo.PlayerY, GameInfo.GetTimeDifference());
 
         if (Console.ReadLine()?.ToUpper() != "R")
             return;
 
-        switch (GameInfo.Preset)
+        var preset = GameInfo.Preset switch
         {
-            case GameInfo.EASY_PRESET:
-                InitEasy();
-                return;
+            GameInfo.EASY_PRESET => EasyDifficulty,
+            GameInfo.MEDIUM_PRESET => MediumDifficulty,
+            GameInfo.HARD_PRESET => HighDifficulty,
+        };
 
-            case GameInfo.MEDIUM_PRESET:
-                InitMedium();
-                return;
-
-            case GameInfo.HARD_PRESET:
-                InitHigh();
-                return;
-        }
+        Init(preset);
     }
 
-    private void SetDigged(in int x, in int y)
+    private void SetDigged(in Cell cell)
     {
-        if (Map[x, y].MinesAround is not 0)
+        if (cell.MinesAround is not 0)
         {
-            Map[x, y].Symbol = Map[x, y].MinesAround.ToString().First();
-            Map[x, y].Color = GameInfo.NumberColors[Map[x, y].MinesAround];
+            cell.Symbol = cell.MinesAround.ToString().First();
+            cell.Color = GameInfo.NumberColors[cell.MinesAround];
         }
         else
         {
-            Map[x, y].Symbol = GameInfo.DIGGED_SYMBOL;
-            Map[x, y].Color = GameInfo.DIGGED_COLOR;
+            cell.Symbol = GameInfo.DIGGED_SYMBOL;
+            cell.Color = GameInfo.DIGGED_COLOR;
         }
     }
 
-    private List<Cell> GetFlaggedCellsAround()
+    private List<Cell> GetFlaggedCellsAround(in int x, in int y)
     {
         var cells = new List<Cell>();
 
-        for (int y = GameInfo.PlayerY - 1; y <= GameInfo.PlayerY + 1; y++)
-            for (int x = GameInfo.PlayerX - 1; x <= GameInfo.PlayerX + 1; x++)
-                if (Map[x, y].IsFlag())
-                    cells.Add(Map[x, y]);
+        for (int yI = y - 1; yI <= y + 1; yI++)
+            for (int xI = x - 1; xI <= x + 1; xI++)
+                if (Map[xI, yI].IsFlag())
+                    cells.Add(Map[xI, yI]);
 
         return cells;
     } 
@@ -345,11 +346,6 @@ public class Game
     private bool AllWithoutMinesHasDigged()
     {
         return (((GameInfo.MapWidth - 2) * (GameInfo.MapHeight - 2)) - GameInfo.MinesCount) == GameInfo.DiggedCount;
-    }
-
-    public void StopGame()
-    {
-        GameInfo.GameIsRunning = false;
     }
 
 
@@ -378,32 +374,35 @@ public class Game
         if (IsBorder(x, y))
             return;
 
-        Map[x, y].Symbol = GameInfo.CURSOR_SYMBOL;
-        Map[x, y].Color = GameInfo.CURSOR_COLOR;
+        var cell = Map[x, y];
+        var playerCell = Map[GameInfo.PlayerX, GameInfo.PlayerY];
 
-        if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsDefault())
-            SetDefault();
-        else if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsFlag())
-            SetFlag();
-        else if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsDigged())
-            SetDigged(GameInfo.PlayerX, GameInfo.PlayerY);
+        cell.Symbol = GameInfo.CURSOR_SYMBOL;
+        cell.Color = GameInfo.CURSOR_COLOR;
+
+        if (playerCell.IsDefault())
+            SetDefault(playerCell);
+        else if (playerCell.IsFlag())
+            SetFlag(playerCell);
+        else if (playerCell.IsDigged())
+            SetDigged(playerCell);
 
         GameInfo.PlayerX = x;
         GameInfo.PlayerY = y;
     }
 
-    private void SetDefault()
+    private void SetDefault(in Cell cell)
     {
-        Map[GameInfo.PlayerX, GameInfo.PlayerY].State = State.Default;
-        Map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.DEFAULT_SYMBOL;
-        Map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.GetColorForDefault(GameInfo.PlayerX, GameInfo.PlayerY);
+        cell.State = State.Default;
+        cell.Symbol = GameInfo.DEFAULT_SYMBOL;
+        cell.Color = GameInfo.GetColorForDefault(GameInfo.PlayerX, GameInfo.PlayerY);
     }
 
-    private void SetFlag()
+    private void SetFlag(in Cell cell)
     {
-        Map[GameInfo.PlayerX, GameInfo.PlayerY].State = State.Flag;
-        Map[GameInfo.PlayerX, GameInfo.PlayerY].Symbol = GameInfo.FLAG_SYMBOL;
-        Map[GameInfo.PlayerX, GameInfo.PlayerY].Color = GameInfo.FLAG_COLOR;
+        cell.State = State.Flag;
+        cell.Symbol = GameInfo.FLAG_SYMBOL;
+        cell.Color = GameInfo.FLAG_COLOR;
     }
 
     private void SetFlagAndUpdateFlagsInStat()
@@ -411,14 +410,16 @@ public class Game
         if (GameInfo.ItsFirstMove)
             return;
 
-        if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsDefault())
+        var playerCell = Map[GameInfo.PlayerX, GameInfo.PlayerY];
+
+        if (playerCell.IsDefault())
         {
-            SetFlag();
+            SetFlag(playerCell);
             GameInfo.FlagsCount--;
         }
-        else if (Map[GameInfo.PlayerX, GameInfo.PlayerY].IsFlag())
+        else if (playerCell.IsFlag())
         {
-            SetDefault();
+            SetDefault(playerCell);
             GameInfo.FlagsCount++;
         }
     }

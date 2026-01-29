@@ -61,6 +61,11 @@ public struct GameInfo(Difficulty difficulty)
     public bool GameIsRunning { get; set; } = true;
 
 
+    public void StopGame()
+    {
+        GameIsRunning = false;
+    }
+
     public ConsoleColor GetColorForDefault(in int x, in int y)
     {
         return (x + y) % 2 is 0 ? DEFAULT_COLOR_EVEN : DEFAULT_COLOR_NOT_EVEN;

@@ -1,6 +1,6 @@
 ﻿namespace Minesweeper;
 
-public struct Cell(int x, int y)
+public class Cell(int x, int y)
 {
     public int X { get; set; } = x;
     public int Y { get; set; } = y;

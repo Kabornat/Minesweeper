@@ -1,6 +1,6 @@
 ﻿namespace Minesweeper;
 
-public struct Difficulty(int mapWidth, int mapHeight, int minesCount, int preset)
+public class Difficulty(int mapWidth, int mapHeight, int minesCount, int preset)
 {
     public int MapWidth { get; set; } = mapWidth;
     public int MapHeight { get; set; } = mapHeight;
