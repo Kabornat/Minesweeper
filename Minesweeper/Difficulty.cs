@@ -1,9 +1,9 @@
 ﻿namespace Minesweeper;
 
-public class Difficulty(int mapWidth, int mapHeight, int minesCount, int preset)
+public class Difficulty(in int mapWidth, in int mapHeight, in int minesCount, in int preset)
 {
-    public int MapWidth { get; set; } = mapWidth;
-    public int MapHeight { get; set; } = mapHeight;
-    public int MinesCount { get; set; } = minesCount;
-    public int Preset { get; set; } = preset;
+    public int MapWidth { get; init; } = mapWidth;
+    public int MapHeight { get; init; } = mapHeight;
+    public int MinesCount { get; init; } = minesCount;
+    public int Preset { get; init; } = preset;
 }

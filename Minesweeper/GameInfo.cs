@@ -1,6 +1,6 @@
 ﻿namespace Minesweeper;
 
-public struct GameInfo(Difficulty difficulty)
+public class GameInfo(Difficulty difficulty)
 {
     public const int EASY_PRESET = 1;
     public const int MEDIUM_PRESET = 2;
@@ -60,11 +60,6 @@ public struct GameInfo(Difficulty difficulty)
     public bool ItsFirstMove { get; set; } = true;
     public bool GameIsRunning { get; set; } = true;
 
-
-    public void StopGame()
-    {
-        GameIsRunning = false;
-    }
 
     public ConsoleColor GetColorForDefault(in int x, in int y)
     {

@@ -16,7 +16,7 @@ public class Game
         Control.AddMediumDifficultAction(InitMedium);
         Control.AddHardDifficultAction(InitHigh);
 
-        Control.AddLeaveAction(GameInfo.StopGame);
+        Control.AddLeaveAction(StopGame);
     }
 
     private readonly Control Control = new();
@@ -30,22 +30,9 @@ public class Game
     private GameInfo GameInfo;
     private Cell[,] Map = new Cell[10,10];
 
-
-    private void InitEasy()
-    {
-        Init(EasyDifficulty);
-    }
-
-    private void InitMedium()
-    {
-        Init(MediumDifficulty);
-    }
-
-    private void InitHigh()
-    {
-        Init(HighDifficulty);
-    }
-
+    private void InitEasy() => Init(EasyDifficulty);
+    private void InitMedium() => Init(MediumDifficulty);
+    private void InitHigh() => Init(HighDifficulty);
     private void Init(in Difficulty difficulty)
     {
         ConsoleRenderer.ClearConsole(); // Очистка консоли и сбросы
@@ -109,8 +96,6 @@ public class Game
             x == 0 || y == 0 || // Верхняя и левая граница
             x == GameInfo.MapWidth - 1 || y == GameInfo.MapHeight - 1; // Нижняя и правая
     }
-
-
     private bool TryGetRandomPositionWithoutBorderAndMine(out int x, out int y)
     {
         x = Random.Shared.Next(GameInfo.MapWidth);
@@ -121,7 +106,6 @@ public class Game
 
         return true;
     }
-
     private void SetMinesCountAround()
     {
         int minesAround = 0;
@@ -143,7 +127,6 @@ public class Game
             }
         }
     }
-
 
     public void Run()
     {
@@ -176,7 +159,6 @@ public class Game
         if (Control.ControlActions.TryGetValue(Console.ReadKey(true).Key, out var action))
             action();
     }
-
     private void Dig()
     {
         var playerCell = Map[GameInfo.PlayerX, GameInfo.PlayerY];
@@ -192,7 +174,7 @@ public class Game
         {
             foreach (var flaggedCell in flaggedCellsAround)
                 if (!flaggedCell.IsMine && GameInfo.GameIsRunning)
-                    GameInfo.StopGame();
+                    StopGame();
 
             foreach (var cell in GetCellsAround(playerCell.X, playerCell.Y, withFlaggedCells: false))
                 BfsDig(cell);
@@ -204,7 +186,6 @@ public class Game
         else if (!GameInfo.GameIsRunning)
             GameOver(isWin: false);
     }
-
     private void BfsDig(in Cell cell)
     {
         DigAndUpdateDiggedStat(cell);
@@ -251,7 +232,6 @@ public class Game
             }
         }
     }
-
     private void DigAndUpdateDiggedStat(in Cell cell)
     {
         if (IsBorder(cell.X, cell.Y) || cell.IsFlag())
@@ -286,7 +266,7 @@ public class Game
             }
             else
             {
-                GameInfo.StopGame();
+                StopGame();
                 return;
             }
         }
@@ -297,10 +277,9 @@ public class Game
 
         SetDigged(cell);
     }
-
     private void GameOver(bool isWin)
     {
-        GameInfo.StopGame();
+        StopGame();
 
         ConsoleRenderer.WriteGameOver(isWin, GameInfo.MapWidth, GameInfo.MapHeight, Map, GameInfo.PlayerX, GameInfo.PlayerY, GameInfo.GetTimeDifference());
 
@@ -316,7 +295,6 @@ public class Game
 
         Init(preset);
     }
-
     private void SetDigged(in Cell cell)
     {
         if (cell.MinesAround is not 0)
@@ -330,7 +308,6 @@ public class Game
             cell.Color = GameInfo.DIGGED_COLOR;
         }
     }
-
     private List<Cell> GetFlaggedCellsAround(in int x, in int y)
     {
         var cells = new List<Cell>();
@@ -341,33 +318,21 @@ public class Game
                     cells.Add(Map[xI, yI]);
 
         return cells;
-    } 
-    
+    }
+    public void StopGame()
+    {
+        GameInfo.GameIsRunning = false;
+    }
     private bool AllWithoutMinesHasDigged()
     {
         return (((GameInfo.MapWidth - 2) * (GameInfo.MapHeight - 2)) - GameInfo.MinesCount) == GameInfo.DiggedCount;
     }
 
 
-    private void MoveUp()
-    {
-        Move(GameInfo.PlayerX, GameInfo.PlayerY - 1);
-    }
-
-    private void MoveDown()
-    {
-        Move(GameInfo.PlayerX, GameInfo.PlayerY + 1);
-    }
-
-    private void MoveRight()
-    {
-        Move(GameInfo.PlayerX + 1, GameInfo.PlayerY);
-    }
-
-    private void MoveLeft()
-    {
-        Move(GameInfo.PlayerX - 1, GameInfo.PlayerY);
-    }
+    private void MoveUp() => Move(GameInfo.PlayerX, GameInfo.PlayerY - 1);
+    private void MoveDown() => Move(GameInfo.PlayerX, GameInfo.PlayerY + 1);
+    private void MoveRight() => Move(GameInfo.PlayerX + 1, GameInfo.PlayerY);
+    private void MoveLeft() => Move(GameInfo.PlayerX - 1, GameInfo.PlayerY);
 
     private void Move(in int x, in int y)
     {
@@ -390,21 +355,18 @@ public class Game
         GameInfo.PlayerX = x;
         GameInfo.PlayerY = y;
     }
-
     private void SetDefault(in Cell cell)
     {
         cell.State = State.Default;
         cell.Symbol = GameInfo.DEFAULT_SYMBOL;
         cell.Color = GameInfo.GetColorForDefault(GameInfo.PlayerX, GameInfo.PlayerY);
     }
-
     private void SetFlag(in Cell cell)
     {
         cell.State = State.Flag;
         cell.Symbol = GameInfo.FLAG_SYMBOL;
         cell.Color = GameInfo.FLAG_COLOR;
     }
-
     private void SetFlagAndUpdateFlagsInStat()
     {
         if (GameInfo.ItsFirstMove)
