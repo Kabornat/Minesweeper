@@ -14,60 +14,23 @@ public class Control
     public readonly ConsoleKey[] MediumDifficultKeys = [ConsoleKey.D2];
     public readonly ConsoleKey[] HardDifficultKeys = [ConsoleKey.D3];
 
-
     public readonly ConsoleKey[] LeaveKeys = [ConsoleKey.X, ConsoleKey.Escape];
 
     public readonly Dictionary<ConsoleKey, Action> ControlActions = new();
 
-    public void AddDigAction(Action action)
-    {
-        AddAction(DigKeys, action);
-    }
+    public void AddDigAction(in Action action) => AddAction(DigKeys, action);
+    public void AddFlagAction(in Action action) => AddAction(FlagKeys, action);
 
-    public void AddFlagAction(Action action)
-    {
-        AddAction(FlagKeys, action);
-    }
+    public void AddMoveUpAction(in Action action) => AddAction(MoveUpKeys, action);
+    public void AddMoveLeftAction(in Action action) => AddAction(MoveLeftKeys, action);
+    public void AddMoveDownAction(in Action action) => AddAction(MoveDownKeys, action);
+    public void AddMoveRightAction(in Action action) => AddAction(MoveRightKeys, action);
 
-    public void AddMoveUpAction(Action action)
-    {
-        AddAction(MoveUpKeys, action);
-    }
+    public void AddEasyDifficultAction(in Action action) => AddAction(EasyDifficultKeys, action);
+    public void AddMediumDifficultAction(in Action action) => AddAction(MediumDifficultKeys, action);
+    public void AddHardDifficultAction(in Action action) => AddAction(HardDifficultKeys, action);
 
-    public void AddMoveLeftAction(Action action)
-    {
-        AddAction(MoveLeftKeys, action);
-    }
-
-    public void AddMoveDownAction(Action action)
-    {
-        AddAction(MoveDownKeys, action);
-    }
-
-    public void AddMoveRightAction(Action action)
-    {
-        AddAction(MoveRightKeys, action);
-    }
-
-    public void AddEasyDifficultAction(Action action)
-    {
-        AddAction(EasyDifficultKeys, action);
-    }
-
-    public void AddMediumDifficultAction(Action action)
-    {
-        AddAction(MediumDifficultKeys, action);
-    }
-
-    public void AddHardDifficultAction(Action action)
-    {
-        AddAction(HardDifficultKeys, action);
-    }
-
-    public void AddLeaveAction(Action action)
-    {
-        AddAction(LeaveKeys, action);
-    }
+    public void AddLeaveAction(in Action action) => AddAction(LeaveKeys, action);
 
     public void AddAction(in ConsoleKey[] keys, in Action action)
     {
